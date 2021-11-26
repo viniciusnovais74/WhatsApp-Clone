@@ -190,23 +190,39 @@ class WhatsAppController {
 
         this.el.contactsMessagesList.querySelectorAll('.contact-item').forEach(item => {
 
-            item.on('click', e =>{
+            item.on('click', e => {
 
                 this.el.home.hide();
                 this.el.main.css({
                     display: 'flex'
                 });
-            
+
             });
-            
+
         });
 
-        this.el.btnAttach.on('click', e=>{
+        this.el.btnAttach.on('click', e => {
 
             this.el.menuAttach.addClass('open');
+            document.addEventListener('click', this.closeMenuAttach())
+        });
 
-        })
+        this.el.btnAttachPhoto.on('click', e => {
+            console.log('photo');
 
+        });
+
+        this.el.btnAttachCamera.on('click', e => {
+            console.log('photo');
+        });
+
+        this.el.btnAttachDocument.on('click', e => {
+            console.log('photo');
+        });
+
+        this.el.btnAttachPhoto.on('click', e => {
+            console.log('photo');
+        });
     }
 
     //Usado para fechar todos os painels abertos
@@ -215,6 +231,11 @@ class WhatsAppController {
         this.el.panelEditProfile.hide();
         this.el.panelAddContact.hide();
 
+    }
+
+    closeMenuAttach(e){
+
+        doc
     }
 
 }
