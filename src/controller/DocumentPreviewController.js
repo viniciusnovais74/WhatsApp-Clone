@@ -1,3 +1,4 @@
+
 const pdfjsLib = require('pdfjs-dist');
 const path = require('path');
 
@@ -35,6 +36,7 @@ export class DocumentPreviewController {
                     break;
 
                 case 'application/pdf':
+
                     reader.onload = e => {
 
                         pdfjsLib.getDocument(new Uint8Array(reader.result)).then(pdf => {
@@ -57,14 +59,12 @@ export class DocumentPreviewController {
 
                                     s({
                                         src: canvas.toDataURL('image/png'),
-                                        info: `${pdf.numPages} paginas`
+                                        info: `${pdf.numPages} paginas${_s}`
                                     });
 
                                 }).catch(err => {
                                     f(err);
                                 });
-
-                                console.log('page', page);
 
                             }).catch(err => {
                                 f(err);
