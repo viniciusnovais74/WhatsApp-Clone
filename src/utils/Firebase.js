@@ -18,7 +18,6 @@ export class Firebase {
     }
 
 
-
     init() {
 
         if (!window._initializedFirebase) {
@@ -34,6 +33,7 @@ export class Firebase {
 
     }
 
+    //metodo statico db() que busca o firebase pelo metodo firestore
     static db() {
 
         return firebase.firestore();
@@ -64,11 +64,8 @@ export class Firebase {
                     });
 
                 }).catch(err => {
-
                     f(err);
-
                 });
-
         });
 
     }

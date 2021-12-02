@@ -20,6 +20,9 @@ export class User extends Model {
     get photo() { return this._data.photo; }
     set photo(value) { this._data.photo = value; }
 
+    get chatID(){return this._data.chatID}
+    set chatID(value){this._data.chatID = value}
+
     getById(id) {
 
         return new Promise((s, f) => {
@@ -39,14 +42,17 @@ export class User extends Model {
 
     }
 
+    //Puxar referencias pelo metodo statico fixo
     static getRef() {
-
+        //retorna do firebase com o metodo db da coleção('/user')
         return Firebase.db().collection('/users');
 
     }
 
+    //Puxar contato pela referencia id
     static getContactRef(id) {
 
+        //retorna o metodo getRef
         return User.getRef()
             .doc(id)
             .collection('contacts');
@@ -65,24 +71,30 @@ export class User extends Model {
 
     }
 
+    //Metodo getContacts gerando uma promesa
     getContacts() {
 
         return new Promise((s, f) => {
 
+            //Na classe User chamar o metodo getContactRef com elemento this.email
             User.getContactRef(this.email).onSnapshot(docs => {
 
                 let contacts = [];
 
                 docs.forEach(doc => {
+
                     let data = doc.data();
                     data.id = doc.id;
                     contacts.push(data);
-                })
-                this.trigger('contactschange', docs);
-                s(contacts);
-            })
 
-        })
+                });
+
+                this.trigger('contactschange', docs);
+
+                s(contacts);
+            });
+
+        });
 
     }
 

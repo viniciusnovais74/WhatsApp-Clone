@@ -1,9 +1,12 @@
+//Importação das Classes e Funções nota: ficar a tendo a metodos proprios dentro dessas classes
 import { Format } from './../utils/Format.js';
 import { DocumentPreviewController } from './DocumentPreviewController.js';
 import { CameraController } from './CameraController.js';
 import { MicrophoneController } from './MicrophoneController.js';
 import { Firebase } from '../utils/Firebase.js';
 import { User } from '../model/User';
+import { Chat } from '../model/Chat.js';
+import { Message } from '../model/Message.js';
 
 export default class WhatsAppController {
 
@@ -16,18 +19,25 @@ export default class WhatsAppController {
         this.initEvents();
 
     }
+
+    //Inicia a autorização de usuario pelo Firebase
     initAuth() {
 
+        //Chama o _firebase com o metodo initAuth()
         this._firebase.initAuth().then(response => {
 
+            //aqui retorna o response com novo usuario de atributo email
             this._user = new User(response.user.email);
 
             this._user.on('datachange', data => {
 
+                //Definido titulo com o nome do Usuario
                 document.querySelector('title').innerHTML = data.name + "- Whatsapp Clone";
 
+                //Definindo o nome do usuario no html pelo firebase
                 this.el.inputNamePanelEditProfile.innerHTML = data.name;
 
+                //verificando se o usuario possui foto e anexando no html
                 if (data.photo) {
 
                     let photo = this.el.imgPanelEditProfile;
@@ -41,10 +51,12 @@ export default class WhatsAppController {
                     photo2.show();
                 }
 
+                //Iniciando o initContacts para adicionar contatos
                 this.initContacts();
 
             });
 
+            //Definindo a função _user com seus respectivos DADOS
             this._user.name = response.user.displayName;
             this._user.email = response.user.email;
             this._user.photo = response.user.photoURL;
@@ -55,19 +67,22 @@ export default class WhatsAppController {
             })
 
 
+            //Aqui definimos uma Variavel chamada userRef para fazer referencia ao usuario, usando e pesquisando pelo email
             let userRef = User.findByEmail(response.user.email);
 
             userRef.set({
+
                 name: response.user.displayName,
                 email: response.user.email,
                 photo: response.user.photoURL
+
             }).then(() => {
+                //Nessa parte inicia uma promesa para poder liberar o display do App
                 this.el.appContent.css({
                     dispay: 'flex'
                 })
+
             })
-
-
 
         }).catch(err => {
 
@@ -82,6 +97,7 @@ export default class WhatsAppController {
 
             this.el.contactsMessagesList.innerHTML = '';
             docs.forEach(doc => {
+
                 let contact = doc.data();
                 let div = document.createElement('div');
                 div.className = 'contact-item';
@@ -147,39 +163,32 @@ export default class WhatsAppController {
 
     `;
                 if (contact.photo) {
-                    div.querySelector('.photo');
+                    let img = div.querySelector('.photo');
                     img.src = contact.photo
                     img.show();
                 }
 
-                div.on('click', e =>{
+                //A div abre o chat de usuario mostrando o nome no activeName junto de outros dados
+                div.on('click', e => {
 
-                    this.el.activeName = contact.name;
-                    this.el.activeStatus = contact.status;
-                    if(contact.photo){
-                        let img = this.el.activePhoto;
-                        img.src = contact.photo;
-                        img.show();
-                    }
-                    this.el.home.hide()
-                    this.el.main.css({
-                        display:'flex'
-                    })
+               this.setActiveChat(contact);
+
 
                 });
 
+                //Usando appendChild para criar mais de uma vez!
                 this.el.contactsMessagesList.appendChild(div);
-            
+
             });
-
         });
-
+        //Aqui ele vai executar o metodo getContacts NOTA: _user = new User, ou seja abra NA CLASSE User o metodo estara lá.
         this._user.getContacts();
-
     }
 
+    //Prototype de elementos 
     elementsPrototype() {
 
+        //Define hide() com display:none
         Element.prototype.hide = function () {
 
             this.style.display = 'none';
@@ -187,6 +196,7 @@ export default class WhatsAppController {
 
         }
 
+        //Define show() com display:block
         Element.prototype.show = function () {
 
             this.style.display = 'block';
@@ -194,6 +204,7 @@ export default class WhatsAppController {
 
         }
 
+        //Verifica a identidade do style.display se é none para poder retorna this
         Element.prototype.toggle = function () {
 
             this.style.display = (this.style.display === 'none');
@@ -201,6 +212,7 @@ export default class WhatsAppController {
 
         }
 
+        //.on() O método split() divide uma String em uma lista ordenada de substrings, coloca essas substrings em um Array logo após da um forEach - busca definindo o evento com um addEventListener com o evento e uma função
         Element.prototype.on = function (events, fn) {
 
             events.split(' ').forEach(event => {
@@ -268,12 +280,15 @@ export default class WhatsAppController {
 
     }
 
+    //Carregador de Elementos é iniciado no Constructor
     loadElements() {
 
+        //Define .el como objeto vazio
         this.el = {};
 
+        //faz uma busca no elemento por traz do id e um forEach
         document.querySelectorAll('[id]').forEach(element => {
-
+            //no forEach ele vai atras do Format
             this.el[Format.getCamelCase(element.id)] = element;
 
         })
@@ -382,10 +397,22 @@ export default class WhatsAppController {
 
                 if (data.name) {
 
-                    this._user.addContact(contact).then(() => {
-                        this.el.btnClosePanelAddContact.click();
-                        console.info('Contato foi Adicionado');
+                    Chat.createIfNotExists(this._user.email, contact.email).then(chat => {
+
+                        contact.chatID = chat.id;
+
+                        this._user.chatID = chat.id;
+
+                        contact.addContact(this._user);
+
+                        this._user.addContact(contact).then(() => {
+                            this.el.btnClosePanelAddContact.click();
+                            console.info('Contato foi Adicionado');
+                        });
+
                     });
+
+
 
                 } else {
                     console.error('Usuario não foi encontrado');
@@ -393,6 +420,7 @@ export default class WhatsAppController {
             });
 
         });
+
         //Botão de New Chat or New Contact Final
 
         this.el.contactsMessagesList.querySelectorAll('.contact-item').forEach(item => {
@@ -616,6 +644,19 @@ export default class WhatsAppController {
         });
 
         //CHAT TEXTo
+        this.el.btnSend.on('click', e => {
+
+            Message.send(
+                this._contactActive.chatID,
+                this._user.email,
+                'text',
+                this.el.inputText.innerHTML
+            );
+
+            this.el.inputText.innerHTML = '';
+            this.el.panelEmojis.removeClass('open')
+        })
+
         this.el.inputText.on('keypress', e => {
 
             if (e.key === 'Enter' && !e.ctrlKey) {
@@ -691,6 +732,45 @@ export default class WhatsAppController {
 
     }
 
+    setActiveChat(contact) {
+
+        if (this._contactActive) {
+            Message.getRef(this._contactActive.chatID).onSnapshot(() => {});
+
+        }
+
+        this._contactActive = contact;
+        this.el.activeName.innerHTML = contact.name;
+        this.el.activeStatus.innerHTML = contact.status;
+        if (contact.photo) {
+            let img = this.el.activePhoto;
+            img.src = contact.photo;
+            img.show();
+        }
+        this.el.home.hide()
+        this.el.main.css({
+
+            display: 'flex'
+
+        });
+
+        Message.getRef(this._contactActive.chatID).orderBy('timeStamp').onSnapshot(doc=>{
+
+            this.el.panelMessagesContainer.innerHTML = "";
+            docs.forEach(doc =>{
+
+                let data = doc.data();
+                let message = new Message();
+
+                message.fromJSON(data);
+                let me = (data.from === this._user.email);
+                let view = message.getViewElement();
+                this.el.panelMessagesContainer.appendChild(view);
+            })
+
+        })
+
+    }
 
     closeRecordMicrophone() {
 
