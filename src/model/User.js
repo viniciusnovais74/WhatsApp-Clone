@@ -72,12 +72,12 @@ export class User extends Model {
     }
 
     //Metodo getContacts gerando uma promesa
-    getContacts() {
+    getContacts(filter = '') {
 
         return new Promise((s, f) => {
 
             //Na classe User chamar o metodo getContactRef com elemento this.email
-            User.getContactRef(this.email).onSnapshot(docs => {
+            User.getContactRef(this.email).where('name', '>=', filter).onSnapshot(docs => {
 
                 let contacts = [];
 

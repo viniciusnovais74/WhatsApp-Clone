@@ -7,6 +7,7 @@ import { Firebase } from '../utils/Firebase.js';
 import { User } from '../model/User';
 import { Chat } from '../model/Chat.js';
 import { Message } from '../model/Message.js';
+import { Base64 } from '../utils/base64.js';
 
 export default class WhatsAppController {
 
@@ -79,7 +80,7 @@ export default class WhatsAppController {
             }).then(() => {
                 //Nessa parte inicia uma promesa para poder liberar o display do App
                 this.el.appContent.css({
-                    dispay: 'flex'
+                    display: 'flex'
                 })
 
             })
@@ -171,7 +172,7 @@ export default class WhatsAppController {
                 //A div abre o chat de usuario mostrando o nome no activeName junto de outros dados
                 div.on('click', e => {
 
-               this.setActiveChat(contact);
+                    this.setActiveChat(contact);
 
 
                 });
@@ -185,119 +186,11 @@ export default class WhatsAppController {
         this._user.getContacts();
     }
 
-    //Prototype de elementos 
-    elementsPrototype() {
-
-        //Define hide() com display:none
-        Element.prototype.hide = function () {
-
-            this.style.display = 'none';
-            return this;
-
-        }
-
-        //Define show() com display:block
-        Element.prototype.show = function () {
-
-            this.style.display = 'block';
-            return this;
-
-        }
-
-        //Verifica a identidade do style.display se é none para poder retorna this
-        Element.prototype.toggle = function () {
-
-            this.style.display = (this.style.display === 'none');
-            return this;
-
-        }
-
-        //.on() O método split() divide uma String em uma lista ordenada de substrings, coloca essas substrings em um Array logo após da um forEach - busca definindo o evento com um addEventListener com o evento e uma função
-        Element.prototype.on = function (events, fn) {
-
-            events.split(' ').forEach(event => {
-                this.addEventListener(event, fn);
-                return this;
-
-            })
-        }
-
-        Element.prototype.css = function (styles) {
-
-            for (let name in styles) {
-                this.style[name] = styles[name]
-            }
-            return this;
-
-        }
-
-        Element.prototype.addClass = function (name) {
-
-            this.classList.add(name);
-            return this;
-
-        }
-
-        Element.prototype.removeClass = function (name) {
-
-            this.classList.remove(name);
-            return this;
-
-        }
-
-        Element.prototype.toggleClass = function (name) {
-
-            this.classList.toggle(name);
-            return this;
-
-        }
-
-        Element.prototype.hasClass = function (name) {
-
-            return this.classList.contains(name);
-
-        }
-
-        HTMLFormElement.prototype.getForm = function () {
-
-            return new FormData(this);
-
-        }
-
-        HTMLFormElement.prototype.toJSON = function () {
-
-            let json = {};
-
-            this.getForm().forEach((value, key) => {
-
-                json[key] = value;
-
-            });
-
-            return json;
-
-        }
-
-    }
-
-    //Carregador de Elementos é iniciado no Constructor
-    loadElements() {
-
-        //Define .el como objeto vazio
-        this.el = {};
-
-        //faz uma busca no elemento por traz do id e um forEach
-        document.querySelectorAll('[id]').forEach(element => {
-            //no forEach ele vai atras do Format
-            this.el[Format.getCamelCase(element.id)] = element;
-
-        })
-    }
-
     initEvents() {
 
-
-        //1-Botão da Foto - Inicio
+        /**
+         * INICIO DO EDITOR DO PERIL DE USUARIO
+         */
         this.el.myPhoto.on('click', e => {
 
             this.closeAllLeftPanel();
@@ -312,7 +205,6 @@ export default class WhatsAppController {
 
         });
 
-        //1-A: Esse botão fecha o Painel de Ediçao::</|\>//
         this.el.btnClosePanelEditProfile.on('click', e => {
 
             this.el.panelEditProfile.removeClass('open');
@@ -324,6 +216,11 @@ export default class WhatsAppController {
 
             this.el.inputProfilePhoto.click();
 
+        })
+        this.el.inputProfilePhoto.on('change', e => {
+            if (this.el.inputProfilePhoto.files.length > 0) {
+                let file = this.el.inputProfilePhoto.files[0];
+            }
         })
 
         //1-B+ Esse botão confirma o envio de foto::</|\>//
@@ -452,9 +349,7 @@ export default class WhatsAppController {
 
         //Anexo>Photos
         this.el.btnAttachPhoto.on('click', e => {
-
             this.el.inputPhoto.click();
-
         });
 
         this.el.inputPhoto.on('change', e => {
@@ -463,9 +358,7 @@ export default class WhatsAppController {
             console.log(this.el.inputPhoto.files);
 
             [...this.el.inputPhoto.files].forEach(file => {
-
-                console.log(file);
-
+                Message.sendImage(this._contactActive.chatID, this._user.email, file);
             });
 
 
@@ -518,6 +411,46 @@ export default class WhatsAppController {
         });
 
         this.el.btnSendPicture.on('click', e => {
+
+            this.el.btnSendPicture.disabled = true;
+
+            let picture = new Image();
+            picture.src = this.el.pictureCamera.src;
+            picture.onload = () => {
+
+                let canvas = document.createElement('canvas');
+                let context = canvas.getContext('2d');
+
+                canvas.setAttribute('widht', picture.width);
+                canvas.setAttribute('height', picture.height);
+
+                context.translate(picture.width, 0);
+                context.scale(-1, 1);
+                context.drawImage(picture, 0, 0, canvas.width, canvas.height);
+
+                Base64.toFile(canvas.toDataURL(Base64.getMimeType(this.el.pictureCamera.src))).then(file => {
+
+                    Message.sendImage(this._contactActive.chatID, this._user.email, file);
+
+                    this.el.btnSendPicture.disabled = false;
+
+                    this.closeAllMainPanel();
+                    this._camera.stop();
+                    this.el.btnReshootPanelCamera.hide();
+                    this.el.pictureCamera.hide();
+                    this.el.videoCamera.show();
+                    this.el.containerSendPicture.hide();
+                    this.el.containerTakePicture.show();
+                    this.el.panelMessagesContainer.show();
+                    this.el.btnSendPicture.disabled = false;
+
+                });
+
+            }
+
+         
+            let ext = mimeType.split('/')[1];
+            let filename = `camera${Date.now()}.${ext}`;
 
 
         });
@@ -589,7 +522,10 @@ export default class WhatsAppController {
 
         this.el.btnSendDocument.on('click', e => {
 
-            console.log('send document');
+            let file = this.el.inputDocument.files[0]
+            let base64 = this.el.imgPanelDocumentPreview.src;
+
+            Message.sendDocument(this._contactActive.chatID, this._user.email, file, base64);
 
         });
 
@@ -597,6 +533,17 @@ export default class WhatsAppController {
         this.el.btnAttachContact.on('click', e => {
 
             this.el.modalContacts.show();
+
+            this._contactsController = new ContactsController(this._contactsController, this._user);
+
+            this._contactsController.on('select', contact =>{
+
+                Message.sendContact(
+                    this._contactActive.chatID,
+                    this._user.email,
+                    contact
+                );
+            })
 
         });
 
@@ -606,42 +553,41 @@ export default class WhatsAppController {
 
         });
 
-        //microfone
+
+
+        /**
+         * Final do Menu Anexar
+         */
+
+        //Microfone Inicio
         this.el.btnSendMicrophone.on('click', e => {
 
             this.el.recordMicrophone.show();
             this.el.btnSendMicrophone.hide();
 
-            this._microphoneController = new MicrophoneController();
-
-            this._microphoneController.on('ready', audio => {
-
-                console.log('recebi o evento play');
-
-                this._microphoneController.startRecorder();
-            });
-
-            this._microphoneController.on('recordTimer', timer => {
-
-                this.el.recordMicrophoneTimer.innerHTML = Format.toTime(timer);
-
-            });
+            this.startRecordMicrophoneTime();
 
         });
 
         this.el.btnCancelMicrophone.on('click', e => {
 
-            this._microphoneController.stopRecorer();
             this.closeRecordMicrophone();
 
         });
 
         this.el.btnFinishMicrophone.on('click', e => {
 
-            this._microphoneController.stopRecorer();
+            this._microphoneController.on('recoded', (file, metadata) => {
+
+                Message.sendAudio(_activeContact.chatID, this._user.email, file, metadata, this._user.photo);
+
+            });
+
             this.closeRecordMicrophone();
 
         });
+        //Microfone Final
+
 
         //CHAT TEXTo
         this.el.btnSend.on('click', e => {
@@ -678,102 +624,280 @@ export default class WhatsAppController {
 
             } else {
 
-                this.el.inuputPlaceholder.show();
+                this.el.inputPlaceholder.show();
                 this.el.btnSendMicrophone.show();
                 this.el.btnSend.hide();
 
             }
 
         });
-
+        //Emojis
         this.el.btnEmojis.on('click', e => {
-
             this.el.panelEmojis.toggleClass('open');
-
         });
 
-        this.el.panelEmojis.querySelectorAll('.emojik')
-            .forEach(emoji => {
-                emoji.on('click', e => {
+        this.el.panelEmojis.querySelectorAll('.emojik').forEach(emoji => {
+            emoji.on('click', e => {
 
-                    let img = this.el.imgEmojiDefault.cloneNode();
+                let img = this.el.imgEmojiDefault.cloneNode();
 
-                    img.style.cssText = emoji.style.cssText;
-                    img.dataset.unicode = emoji.dataset.unicode;
-                    img.alt = emoji.dataset.unicode;
+                img.style.cssText = emoji.style.cssText;
+                img.dataset.unicode = emoji.dataset.unicode;
+                img.alt = emoji.dataset.unicode;
 
-                    emoji.classList.forEach(name => {
-                        img.classList.add(name);
-                    });
+                emoji.classList.forEach(name => {
+                    img.classList.add(name);
+                });
 
-                    let cursor = window.getSelection();
+                let cursor = window.getSelection();
 
-                    if (!cursor.focusNode.id || !cursor.focusNode.id == 'input-text') {
-                        this.el.inputText.focus();
-                        cursor = window.getSelection();
-                    }
+                if (!cursor.focusNode.id || !cursor.focusNode.id == 'input-text') {
+                    this.el.inputText.focus();
+                    cursor = window.getSelection();
+                }
 
-                    let range = document.createRange();
+                let range = document.createRange();
 
-                    range = cursor.getRangeAt(0);
-                    range.deleteContents();
+                range = cursor.getRangeAt(0);
+                range.deleteContents();
 
-                    let frag = document.createDocumentFragment();
+                let frag = document.createDocumentFragment();
 
-                    frag.appendChild(img);
+                frag.appendChild(img);
 
-                    range.insertNode(frag);
+                range.insertNode(frag);
 
-                    range.setStartAfter(img);
+                range.setStartAfter(img);
 
-                    this.el.inputText.dispatchEvent(new Event('keyup'));
-                })
+                this.el.inputText.dispatchEvent(new Event('keyup'));
+            });
+        });
+    }
+
+
+    //Prototype de elementos 
+    elementsPrototype() {
+
+        //Define hide() com display:none
+        Element.prototype.hide = function () {
+
+            this.style.display = 'none';
+            return this;
+
+        }
+
+        //Define show() com display:block
+        Element.prototype.show = function () {
+
+            this.style.display = 'block';
+            return this;
+
+        }
+
+        //Verifica a identidade do style.display se é none para poder retorna this
+        Element.prototype.toggle = function () {
+
+            this.style.display = (this.style.display === 'none');
+            return this;
+
+        }
+
+        //.on() O método split() divide uma String em uma lista ordenada de substrings, coloca essas substrings em um Array logo após da um forEach - busca definindo o evento com um addEventListener com o evento e uma função
+        Element.prototype.on = function (events, fn) {
+
+            events.split(' ').forEach(event => {
+                this.addEventListener(event, fn);
+
+
+            })
+            return this;
+        }
+
+        Element.prototype.css = function (styles) {
+
+            for (let name in styles) {
+                this.style[name] = styles[name]
+            }
+            return this;
+
+        }
+
+        Element.prototype.addClass = function (name) {
+
+            this.classList.add(name);
+            return this;
+
+        }
+
+        Element.prototype.removeClass = function (name) {
+
+            this.classList.remove(name);
+            return this;
+
+        }
+
+        Element.prototype.toggleClass = function (name) {
+
+            this.classList.toggle(name);
+            return this;
+
+        }
+
+        Element.prototype.hasClass = function (name) {
+
+            return this.classList.contains(name);
+
+        }
+
+        HTMLFormElement.prototype.getForm = function () {
+
+            return new FormData(this);
+
+        }
+
+        HTMLFormElement.prototype.toJSON = function () {
+
+            let json = {};
+
+            this.getForm().forEach((value, key) => {
+
+                json[key] = value;
+
             });
 
+            return json;
+
+        }
+
+    }
+
+    //Carregador de Elementos é iniciado no Constructor
+    loadElements() {
+
+        //Define .el como objeto vazio
+        this.el = {};
+
+        //faz uma busca no elemento por traz do id e um forEach
+        document.querySelectorAll('[id]').forEach(element => {
+            //no forEach ele vai atras do Format
+            this.el[Format.getCamelCase(element.id)] = element;
+
+        })
     }
 
     setActiveChat(contact) {
 
         if (this._contactActive) {
-            Message.getRef(this._contactActive.chatID).onSnapshot(() => {});
-
+            Message.getRef(this._contactActive.chatID).onSnapshot(() => { });
         }
 
         this._contactActive = contact;
+
         this.el.activeName.innerHTML = contact.name;
+
         this.el.activeStatus.innerHTML = contact.status;
+
         if (contact.photo) {
+
             let img = this.el.activePhoto;
+
             img.src = contact.photo;
+
             img.show();
+
         }
+
         this.el.home.hide()
         this.el.main.css({
-
             display: 'flex'
-
         });
 
-        Message.getRef(this._contactActive.chatID).orderBy('timeStamp').onSnapshot(doc=>{
+        this.el.panelMessagesContainer.innerHTML = "";
 
-            this.el.panelMessagesContainer.innerHTML = "";
-            docs.forEach(doc =>{
+        Message.getRef(this._contactActive.chatID).orderBy('timeStamp').onSnapshot(docs => {
+
+            let scrollTop = this.el.panelMessagesContainer.scrollTop;
+            let scrollTopMax = (this.el.panelMessagesContainer.scrollHeight - this.el.panelMessagesContainer.offsetHeight);
+            let autoScroll = (scrollTop >= scrollTopMax);
+
+            docs.forEach(doc => {
 
                 let data = doc.data();
+
+                data.id = doc.id;
+
                 let message = new Message();
 
                 message.fromJSON(data);
+
                 let me = (data.from === this._user.email);
-                let view = message.getViewElement();
-                this.el.panelMessagesContainer.appendChild(view);
-            })
 
-        })
+                let view = message.getViewElement(me);
 
+                if (!this.el.panelMessagesContainer.querySelector('#_' + data.id)) {
+
+                    if (!me) {
+                        doc.ref.set({
+                            status: 'read'
+                        }, {
+                            merge: true
+                        })
+                    }
+
+
+                } else if (this.el.panelMessagesContainer.querySelector(`#_` + data.id) && me) {
+
+                    let msgEl = this.el.panelMessagesContainer.querySelector('#_' + data.id);
+
+                    msgEl.querySelector('.message-status').innerHTML = message.getStatusViewElement().outerHTML;
+
+
+                } else {
+
+
+                }
+                if (!data.renderizedOneTime) {
+                    this.el.panelMessagesContainer.appendChild(view);
+
+                    data.renderizedOneTime = true;
+                }
+            });
+
+            if (autoScroll) {
+
+                this.el.panelMessagesContainer.scrollTop = (this.el.panelMessagesContainer.scrollHeight - this.el.panelMessagesContainer.offsetHeight);
+
+            } else {
+
+                this.el.panelMessagesContainer.scrollTop = scrollTop;
+
+            }
+
+        });
+
+    }
+
+    //////////////////////////////////////IGNORE//////////////////////////////////////////////
+    startRecordMicrophoneTime() {
+
+        this._microphoneController = new MicrophoneController();
+
+        this._microphoneController.on('ready', audio => {
+
+            this._microphoneController.startRecorder();
+
+        });
+
+        this._microphoneController.on('recordTimer', (data, timer) => {
+
+            this.el.recordMicrophoneTimer.innerHTML = data.displayTimer;
+
+        });
     }
 
     closeRecordMicrophone() {
 
+        this._microphoneController.stopRecorer();
         this.el.recordMicrophone.hide();
         this.el.btnSendMicrophone.show();
 
