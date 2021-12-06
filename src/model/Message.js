@@ -65,7 +65,7 @@ export class Message extends Model {
             }).then(result => {
                 let docRef = result.parent.doc(result.id)
                 docRef.set({
-                    status: 'sent'
+                    status: 'send'
                 }, {
                     merge: true
                 }).then(() => {
@@ -138,7 +138,7 @@ export class Message extends Model {
                 Message.send(chatId, from, 'image', '', false)
                 msgRef.set({
                     content: snapshot.downloadURL,
-                    status: 'sent'
+                    status: 'send'
                 }, {
                     merge: true
                 });
@@ -535,7 +535,7 @@ export class Message extends Model {
 `;
                 break;
 
-            case 'send':
+            case 'send' || 'sent':
                 div.innerHTML = `
                         <span data-icon="msg-check-light">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 15" width="16" height="15">

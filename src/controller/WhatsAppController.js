@@ -579,7 +579,13 @@ export default class WhatsAppController {
 
             this._microphoneController.on('recoded', (file, metadata) => {
 
-                Message.sendAudio(_activeContact.chatID, this._user.email, file, metadata, this._user.photo);
+                Message.sendAudio(
+                    this._activeContact.chatID,
+                    this._user.email,
+                    file,
+                    metadata,
+                    this._user.photo
+                );
 
             });
 
@@ -827,7 +833,7 @@ export default class WhatsAppController {
 
                 let me = (data.from === this._user.email);
 
-              
+
                 let messageEl = message.getViewElement((data.from === this._user.email));
 
                 this.el.panelMessagesContainer.appendChild(messageEl);
