@@ -2,6 +2,7 @@ import { Firebase } from "../utils/Firebase";
 import { Model } from "./Model";
 import { Format } from "../utils/Format";
 import { Base64 } from "../utils/base64";
+import { Upload } from "../utils/Upload";
 
 export class Message extends Model {
 
@@ -76,29 +77,7 @@ export class Message extends Model {
     }
 
     static upload(from, file) {
-        return new Promise((s, f) => {
-
-            let uploadTask = Firebase
-                .hd()
-                .ref(from)
-                .child(Date.now() + '_' + file.name)
-                .put(file);
-
-            uploadTask.on('state_changed', snapshot => {
-
-                console.log('upload', snapshot);
-
-            }, err => {
-
-                f(err);
-
-            }, success => {
-
-                s(uploadTask.snapshot);
-
-            });
-
-        });
+        return Upload.send(file, from);
     }
 
     static sendDocument(chatID, from, file, preview) {
@@ -134,18 +113,18 @@ export class Message extends Model {
     static sendImage(chatId, from, file) {
 
 
-            Message.upload(from, file).then(snapshot => {
-                Message.send(chatId, from, 'image', '', false)
-                msgRef.set({
-                    content: snapshot.downloadURL,
-                    status: 'send'
-                }, {
-                    merge: true
-                });
-
+        Message.upload(from, file).then(snapshot => {
+            Message.send(chatId, from, 'image', '', false)
+            msgRef.set({
+                content: snapshot.downloadURL,
+                status: 'send'
+            }, {
+                merge: true
             });
 
-        
+        });
+
+
     }
 
     static getRef(chatID) {
@@ -479,20 +458,20 @@ export class Message extends Model {
 
             default:
                 div.innerHTML = `
-            <div class="font-style _3DFk6  tail">
-            <span class="tail-container"></span>
-            <span class="tail-container highlight"></span>
-            <div class="Tkt2p">
-                <div class="_3zb-j ZhF0n">
-                    <span dir="ltr" class="selectable-text invisible-space message-text">${this.content}</span>
-                </div>
-                <div class="_2f-RV">
-                    <div class="_1DZAH">
-                        <span class="message-time">${Format.timeStampToTime(this.timeStamp)}</span>
+                    <div class="font-style _3DFk6  tail">
+                    <span class="tail-container"></span>
+                    <span class="tail-container highlight"></span>
+                        <div class="Tkt2p">
+                            <div class="_3zb-j ZhF0n">
+                                <span dir="ltr" class="selectable-text invisible-space message-text">${this.content}</span>
+                            </div>
+                            <div class="_2f-RV">
+                                <div class="_1DZAH">
+                                    <span class="message-time">${Format.timeStampToTime(this.timeStamp)}</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
-        </div>
                 `;
 
                 break;
@@ -535,7 +514,7 @@ export class Message extends Model {
 `;
                 break;
 
-            case 'send' || 'sent':
+            case 'send':
                 div.innerHTML = `
                         <span data-icon="msg-check-light">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 15" width="16" height="15">

@@ -9,6 +9,7 @@ import { Chat } from '../model/Chat.js';
 import { Message } from '../model/Message.js';
 import { Base64 } from '../utils/base64.js';
 import { ContactsController } from './ContactsController.js';
+import { Upload } from '../utils/Upload.js';
 
 export default class WhatsAppController {
 
@@ -219,8 +220,14 @@ export default class WhatsAppController {
 
         })
         this.el.inputProfilePhoto.on('change', e => {
+
             if (this.el.inputProfilePhoto.files.length > 0) {
                 let file = this.el.inputProfilePhoto.files[0];
+
+                Upload.send(file, this._user.email).then(snapshot => {
+                    this._user.photo = snapshot.downloadURL;
+                    this._user.save();
+                })
             }
         })
 
@@ -579,13 +586,7 @@ export default class WhatsAppController {
 
             this._microphoneController.on('recoded', (file, metadata) => {
 
-                Message.sendAudio(
-                    this._activeContact.chatID,
-                    this._user.email,
-                    file,
-                    metadata,
-                    this._user.photo
-                );
+                Message.sendAudio(_activeContact.chatID, this._user.email, file, metadata, this._user.photo);
 
             });
 
