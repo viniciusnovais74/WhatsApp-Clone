@@ -13,6 +13,8 @@ export class Message extends Model {
         this._data = {};
 
     }
+    get id() { return this._data.id; }
+    set id(value) { return this._data.id = value; }
 
     get content() { return this._data.content; }
     set content(value) { return this._data.content = value; }
@@ -26,42 +28,54 @@ export class Message extends Model {
     get status() { return this._data.status; }
     set status(value) { return this._data.status = value; }
 
+    get preview() { return this._data.preview }
+    set preview(value) { return this._data.preview = value };
+
+    get info() { return this._data.info };
+    set info(value) { return this._data.info = value };
+
+    get fileType() { return this._data.fileType };
+    set fileType(value) { return this._data.fileType = value };
+
+    get filename() { return this._data.filename };
+    set filename(value) { return this._data.filename = value };
+
+    get size() { return this._data.size };
+    set size(value) { return this._data.size = value };
+
+    get from() { return this._data.from };
+    set from(value) { return this._data.from = value };
+
+    get photo() { return this._data.photo };
+    set photo(value) { return this._data.photo = value };
+
+    get duration() { return this._data.duration };
+    set duration(value) { return this._data.duration = value };
+
 
     static send(chatID, from, type, content, setSend = true) {
 
         return new Promise((s, f) => {
-            let promiseSent = Message.getRef(chatID).add({
+            Message.getRef(chatID).add({
                 content,
                 timeStamp: new Date(),
                 status: 'wait',
                 type,
                 from
-            });
-
-            if (setSend) {
-
-                promiseSent.then(result => {
-
-                    let docRef = result.parent.doc(result.id);
-
-                    s(docRef.set({
-                        status: 'send'
-                    }, {
-                        merge: true
-                    }))
-                }).catch(err => {
-                    f(err);
+            }).then(result => {
+                let docRef = result.parent.doc(result.id)
+                docRef.set({
+                    status: 'sent'
+                }, {
+                    merge: true
+                }).then(() => {
+                    s(docRef)
                 });
-            } else {
-                s(promiseSent);
-            }
+            });
         });
-
-
     }
 
-    static upload(from,file) {
-
+    static upload(from, file) {
         return new Promise((s, f) => {
 
             let uploadTask = Firebase
@@ -72,44 +86,67 @@ export class Message extends Model {
 
             uploadTask.on('state_changed', snapshot => {
 
-                console.log(); ('upload', snapshot);
+                console.log('upload', snapshot);
 
             }, err => {
-                f(err);
-            }, sucess => {
-                s(uploadTask.snapshot);
-            })
-        })
 
+                f(err);
+
+            }, success => {
+
+                s(uploadTask.snapshot);
+
+            });
+
+        });
     }
 
     static sendDocument(chatID, from, file, preview) {
+        Message.send(chatID, from, 'document').then(msgRef => {
 
-        Base64.toFile(preview).then(filePreview => {
+            Base64.toFile(preview).then(filePreview => {
 
-        })
+                Message.upload(file).then(snapshot => {
+
+                    let downloadFile = snapshot.downloadURL;
+
+
+                    Message.upload(filePreview).then(snapshot2 => {
+
+                        let downloadPreview = snapshot2.downloadURL;
+
+                        msgRef.set({
+                            content: downloadFile,
+                            preview: downloadPreview,
+                            filename: file.name,
+                            size: file.size,
+                            fileType: file.type
+                        })
+                    });
+                });
+            });
+        });
+
 
     }
 
-    static sendImage(chatID, from, file) {
 
-        return Message.send(chatID, from, 'image', '', false).then(msgRef => {
+    static sendImage(chatId, from, file) {
 
-            Message.upload(from, file).then(snapshot=>{
 
+            Message.upload(from, file).then(snapshot => {
+                Message.send(chatId, from, 'image', '', false)
                 msgRef.set({
                     content: snapshot.downloadURL,
-                    status: 'send'
+                    status: 'sent'
                 }, {
                     merge: true
                 });
 
             });
 
-        });
-
+        
     }
-
 
     static getRef(chatID) {
         return Firebase.db()
@@ -122,14 +159,12 @@ export class Message extends Model {
 
         let div = document.createElement('div');
 
-        div.id = `_${this.id}`;
-
         div.className = 'message';
 
         switch (this.type) {
 
             case 'contact':
-                    div.innerHTML = `
+                div.innerHTML = `
                 <div class="_3_7SH kNKwo  tail">
                 <span class="tail-container"></span>
                 <span class="tail-container highlight"></span>
@@ -154,7 +189,7 @@ export class Message extends Model {
                         </div>
                         <div class="_1lC8v">
                             <div dir="ltr" class="_3gkvk selectable-text invisible-space copyable-text">
-                                Nome do Contato Anexado</div>
+                                ${this.content.name}</div>
                         </div>
                         <div class="_3a5-b">
                             <div class="_1DZAH" role="button">
@@ -169,8 +204,13 @@ export class Message extends Model {
                 </div>
 
             </div>
-            
                     `;
+
+                if (this.content.photo) {
+                    let img = div.querySelector('.photo-contact-sended');
+                    img.src = this.content.photo;
+                    img.shadowRoot();
+                }
                 break;
 
             case 'image':
@@ -229,6 +269,9 @@ export class Message extends Model {
 
                 div.querySelector('.message-photo').on('load'), e => {
                     div.querySelector('._340lu').hide();
+                    div.querySelector('_3v3PK').classList({
+                        height: 'auto',
+                    });
                 }
                 break;
 
@@ -237,13 +280,13 @@ export class Message extends Model {
         <div class="_3_7SH _1ZPgd ">
         <div class="_1fnMt _2CORf">
             <a class="_1vKRe" href="#">
-                <div class="_2jTyA" style="background-image: url()"></div>
+                <div class="_2jTyA" style="background-image: url(${this.preview})"></div>
                 <div class="_12xX7">
                     <div class="_3eW69">
                         <div class="JdzFp message-file-icon icon-doc-pdf"></div>
                     </div>
                     <div class="nxILt">
-                        <span dir="auto" class="message-filename">Arquivo.pdf</span>
+                        <span dir="auto" class="message-filename">${this.filename}</span>
                     </div>
                     <div class="_17viz">
                         <span data-icon="audio-download" class="message-file-download">
@@ -263,9 +306,9 @@ export class Message extends Model {
                 </div>
             </a>
             <div class="_3cMIj">
-                <span class="PyPig message-file-info">32 páginas</span>
-                <span class="PyPig message-file-type">PDF</span>
-                <span class="PyPig message-file-size">4 MB</span>
+                <span class="PyPig message-file-info">${this.info}</span>
+                <span class="PyPig message-file-type">${this.fileType}</span>
+                <span class="PyPig message-file-size">${this.size}</span>
             </div>
             <div class="_3Lj_s">
                 <div class="_1DZAH" role="button">
@@ -276,7 +319,9 @@ export class Message extends Model {
     </div>
 
                 `;
-
+                div.on('click', e => {
+                    window.open(this.content);
+                });
                 break;
 
             case 'audio':
@@ -312,7 +357,7 @@ export class Message extends Model {
                                     <div class="_1sLSi">
                                         <span class="nDKsM" style="width: 0%;"></span>
                                         <input type="range" min="0" max="100" class="_3geJ8" value="0">
-                                        <audio src="#" preload="auto"></audio>
+                                        <audio src="${this.content}" preload="auto"></audio>
                                     </div>
                                 </div>
                             </div>
@@ -364,12 +409,77 @@ export class Message extends Model {
                 </div>
             </div>
                        `;
+
+                let audioEl = div.querySelector('audio');
+                let loadEl = div.querySelector('.audio-load');
+                let btnPlay = div.querySelector('.audio-play');
+                let btnPause = div.querySelector('.audio-pause');
+                let inputRange = div.querySelector('[type=range]');
+                let audioDuration = div.querySelector('.message-audio-duration');
+
+                audioEl.onloadeddata = e => {
+                    loadEl.hide();
+                    btnPlay.show();
+                }
+
+                audioEl.onplay = e => {
+                    btnPlay.hide();
+                    btnPause.show();
+                }
+
+                audioEl.onpause = e => {
+                    audioDuration.innerHTML = Format.toTime(this.duration * 1000);
+                    btnPlay.show();
+                    btnPause();
+                }
+                audioEl.onended = e => {
+
+                    audioEl.currentTime = 0;
+
+                }
+
+                audioEl.ontimeupdate = e => {
+
+                    btnPlay.hide();
+                    btnPause.hide();
+
+                    audioDuration.innerHTML = Format.toTime(audioEl.currentTime * 1000);
+                    inputRange.value = (audioEl.currentTime * 100) / this.duration;
+
+                    if (audioEl.paused) {
+                        btnPlay.show();
+                    }
+                    else {
+                        btnPause.show();
+                    }
+
+
+                }
+
+                btnPlay.on('click', e => {
+
+                    audioEl.play();
+
+                })
+
+                btnPause.on('click', e => {
+
+                    audioEl.pause();
+
+                })
+
+                inputRange.on('change', e => {
+
+                    audioEl.currentTime = (inputRange.value * this.duration) / 100;
+
+                })
+
                 break;
 
 
             default:
                 div.innerHTML = `
-            <div class="font-style _3DFk6  tail id="_${this.id}">
+            <div class="font-style _3DFk6  tail">
             <span class="tail-container"></span>
             <span class="tail-container highlight"></span>
             <div class="Tkt2p">
@@ -405,7 +515,6 @@ export class Message extends Model {
         return div;
 
     }
-
 
     getStatusViewElement() {
 

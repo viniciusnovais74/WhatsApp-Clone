@@ -8,6 +8,7 @@ import { User } from '../model/User';
 import { Chat } from '../model/Chat.js';
 import { Message } from '../model/Message.js';
 import { Base64 } from '../utils/base64.js';
+import { ContactsController } from './ContactsController.js';
 
 export default class WhatsAppController {
 
@@ -241,11 +242,7 @@ export default class WhatsAppController {
             console.log(this.el.inputNamePanelEditProfile.innerHTML);
 
         });
-
-
-
         //1-Botão da Foto - Final
-
         //Botão de Nova Conversa ou Novo Contato Inicio
         this.el.btnNewContact.on('click', e => {
 
@@ -413,6 +410,13 @@ export default class WhatsAppController {
         this.el.btnSendPicture.on('click', e => {
 
             this.el.btnSendPicture.disabled = true;
+            let regex = /^data:(.+);base64,(.*)$/;
+            let result = this.el.pictureCamera.src.match(regex);
+            let mimetype = result[1];
+            let ext = mimetype.split('/')[1];
+            let filename = `camera${Date.now()}.${ext}`;
+
+
 
             let picture = new Image();
             picture.src = this.el.pictureCamera.src;
@@ -428,31 +432,30 @@ export default class WhatsAppController {
                 context.scale(-1, 1);
                 context.drawImage(picture, 0, 0, canvas.width, canvas.height);
 
-                Base64.toFile(canvas.toDataURL(Base64.getMimeType(this.el.pictureCamera.src))).then(file => {
+                //  .toFile(canvas.toDataURL(Base64.getMimeType(this.el.pictureCamera.src))).then(file Base64=> {
+                fetch(canvas.toDataURL(mimetype)).then(res => {
+                    return res.arrayBuffer();
+                })
+                    .then(buffer => {
+                        return new File([buffer], filename, { type: mimetype });
 
-                    Message.sendImage(this._contactActive.chatID, this._user.email, file);
+                    })
+                    .then(file => {
 
-                    this.el.btnSendPicture.disabled = false;
+                        Message.sendImage(this._contactActive.chatID, this._user.email, file);
 
-                    this.closeAllMainPanel();
-                    this._camera.stop();
-                    this.el.btnReshootPanelCamera.hide();
-                    this.el.pictureCamera.hide();
-                    this.el.videoCamera.show();
-                    this.el.containerSendPicture.hide();
-                    this.el.containerTakePicture.show();
-                    this.el.panelMessagesContainer.show();
-                    this.el.btnSendPicture.disabled = false;
-
-                });
-
+                        this.el.btnSendPicture.disabled = false;
+                        this.closeAllMainPanel();
+                        this._camera.stop();
+                        this.el.btnReshootPanelCamera.hide();
+                        this.el.pictureCamera.hide();
+                        this.el.videoCamera.show();
+                        this.el.containerSendPicture.hide();
+                        this.el.containerTakePicture.show();
+                        this.el.panelMessagesContainer.show();
+                        this.el.btnSendPicture.disabled = false;
+                    });
             }
-
-
-            let ext = mimeType.split('/')[1];
-            let filename = `camera${Date.now()}.${ext}`;
-
-
         });
 
         //Anexo>Documentos
@@ -534,7 +537,7 @@ export default class WhatsAppController {
 
             this.el.modalContacts.show();
 
-            this._contactsController = new ContactsController(this._contactsController, this._user);
+            this._contactsController = new ContactsController(this.modalContacts, this._user);
 
             this._contactsController.on('select', contact => {
 
@@ -552,9 +555,6 @@ export default class WhatsAppController {
             this.el.modalContacts.hide();
 
         });
-
-
-
         /**
          * Final do Menu Anexar
          */
@@ -589,7 +589,7 @@ export default class WhatsAppController {
         //Microfone Final
 
 
-        //CHAT TEXTo
+        //CHAT txt
         this.el.btnSend.on('click', e => {
 
             Message.send(
@@ -628,6 +628,7 @@ export default class WhatsAppController {
             }
 
         });
+
         //Emojis
         this.el.btnEmojis.on('click', e => {
             this.el.panelEmojis.toggleClass('open');
@@ -804,14 +805,15 @@ export default class WhatsAppController {
         });
 
 
+        this.el.panelMessagesContainer.innerHTML = '';
+
+        this._messagesReceived = [];
 
         Message.getRef(this._contactActive.chatID).orderBy('timeStamp').onSnapshot(docs => {
 
             let scrollTop = this.el.panelMessagesContainer.scrollTop;
             let scrollTopMax = (this.el.panelMessagesContainer.scrollHeight - this.el.panelMessagesContainer.offsetHeight);
             let autoScroll = (scrollTop >= scrollTopMax);
-
-            this.el.panelMessagesContainer.innerHTML = "";
 
             docs.forEach(doc => {
 
@@ -825,11 +827,12 @@ export default class WhatsAppController {
 
                 let me = (data.from === this._user.email);
 
-                let view = message.getViewElement(me);
+              
                 let messageEl = message.getViewElement((data.from === this._user.email));
 
                 this.el.panelMessagesContainer.appendChild(messageEl);
 
+                let view = message.getViewElement(me);
 
                 if (!this.el.panelMessagesContainer.querySelector('#_' + data.id)) {
 
@@ -841,6 +844,7 @@ export default class WhatsAppController {
                         })
                     }
 
+                    this.el.panelMessagesContainer.appendChild(view);
 
                 } else if (this.el.panelMessagesContainer.querySelector(`#_` + data.id) && me) {
 
@@ -851,22 +855,22 @@ export default class WhatsAppController {
 
                 }
 
-                if (data.type === 'contact') {
+                if (message.type === 'contact') {
 
-                    messageEl.querySelector('.btn-message-send').on('click', e => {
+                    view.querySelector('.btn-message-send').on('click', e => {
 
 
-                        Chat.createIfNotExists(this._user.email, data.content.email).then(chat => {
+                        Chat.createIfNotExists(this._user.email, message.content.email).then(chat => {
 
-                            let contact = new User(data.content.email);
+                            let contact = new User(message.content.email);
 
-                            contact.on('datachange', userData => {
+                            contact.on('datachange', data => {
 
-                                contact.chatId = chat.id;
+                                contact.chatID = chat.id;
 
                                 this._user.addContact(contact);
 
-                                this._user.chatId = chat.id;
+                                this._user.chatID = chat.id;
 
                                 contact.addContact(this._user);
 

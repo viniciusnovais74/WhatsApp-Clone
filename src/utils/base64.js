@@ -12,7 +12,7 @@ export class Base64 {
 
     static toFile(urlBase64) {
 
-        let mimeType = this.getMimetype();
+        let mimeType = Base64.getMimetype(urlBase64);
         let ext = mimeType.split('/')[1];
         let filename = `file${Date.now()}.${ext}`;
 
