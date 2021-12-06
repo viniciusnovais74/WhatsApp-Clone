@@ -131,7 +131,7 @@ export default class WhatsAppController {
                 <span dir="auto" title="${contact.name}" class="_1wjpf">${contact.name}</span>
             </div>
             <div class="_3Bxar">
-                <span class="_3T2VG">${contact.lastMessageTime}</span>
+                <span class="_3T2VG">${Format.timeStampToTime(contact.lastMessageTime)}</span>
             </div>
         </div>
         <div class="_1AwDx">
@@ -226,7 +226,9 @@ export default class WhatsAppController {
 
                 Upload.send(file, this._user.email).then(snapshot => {
                     this._user.photo = snapshot.downloadURL;
-                    this._user.save();
+                    this._user.save().then(()=>{
+                        this.el.btnClosePanelEditProfile.click();
+                    })
                 })
             }
         })
