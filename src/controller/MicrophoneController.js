@@ -1,4 +1,5 @@
 import { ClassEvent } from "../utils/ClassEvent";
+import { Format } from "../utils/Format";
 export class MicrophoneController extends ClassEvent {
 
     constructor() {
@@ -17,7 +18,10 @@ export class MicrophoneController extends ClassEvent {
 
             this._stream = stream;
 
-            this.trigger('ready', this._stream);
+            this.trigger('ready', {
+                stream: this._stream,
+                audio: this._audio
+            });
 
         }).catch(err => {
 
@@ -35,10 +39,13 @@ export class MicrophoneController extends ClassEvent {
 
     stop() {
 
-        this._stream.getTracks().forEach(track => {
-            track.stop();
-        });
+        if (this.isAvailable) {
+            this._stream.getTracks().forEach(track => {
+                track.stop();
+            });
 
+            this.trigger('stop');
+        }
     }
 
     startRecorder() {
@@ -76,7 +83,7 @@ export class MicrophoneController extends ClassEvent {
 
                 let reader = new FileReader();
 
-                reader.onload = e =>{
+                reader.onload = e => {
 
                     console.log(file)
 
@@ -96,6 +103,21 @@ export class MicrophoneController extends ClassEvent {
 
     }
 
+    play() {
+
+        if (this.isAvailable) {
+            this._audio = new Audio();
+
+            this._audio.srcObject = MediaStream(this._stream);
+
+            this._audio.play();
+            this.trigger('play', {
+                stream: this._stream,
+                audio: this._audio
+            });
+        }
+    }
+
     stopRecorer() {
 
         if (this.isAvailable()) {
@@ -107,18 +129,18 @@ export class MicrophoneController extends ClassEvent {
 
     }
 
-    startTimer(){
+    startTimer() {
 
         let start = Date.now();
 
         this._recordMicrophoneInterval = setInterval(() => {
-            
-            this.trigger('recordTimer', (Date.now() - start))
 
+            this.trigger('recordTimer', (Date.now() - start))
+            
         }, 100);
     }
 
-    stopTimer(){
+    stopTimer() {
 
         clearInterval(this._recordMicrophoneInterval);
 

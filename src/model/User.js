@@ -45,7 +45,7 @@ export class User extends Model {
     //Puxar referencias pelo metodo statico fixo
     static getRef() {
         //retorna do firebase com o metodo db da coleção('/user')
-        return Firebase.db().collection('/users');
+        return Firebase.db().collection('users');
 
     }
 

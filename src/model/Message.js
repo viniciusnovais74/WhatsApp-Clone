@@ -3,17 +3,10 @@ import { Model } from "./Model";
 import { Format } from "../utils/Format";
 import { Base64 } from "../utils/base64";
 import { Upload } from "../utils/Upload";
+import { PDFFunctionFactory } from "pdfjs-dist/build/pdf.worker";
 
 export class Message extends Model {
 
-    constructor() {
-
-        super();
-
-        this._locale = 'pt-BR';
-        this._data = {};
-
-    }
     get id() { return this._data.id; }
     set id(value) { return this._data.id = value; }
 
@@ -54,34 +47,60 @@ export class Message extends Model {
     set duration(value) { return this._data.duration = value };
 
 
+    constructor() {
+
+        super();
+
+        this._locale = 'pt-BR';
+        this._data = {};
+
+    }
+
     static send(chatID, from, type, content, setSend = true) {
 
         return new Promise((s, f) => {
-            Message.getRef(chatID).add({
+            let promiseSent = Message.getRef(chatID).add({
                 content,
                 timeStamp: new Date(),
                 status: 'wait',
                 type,
                 from
-            }).then(result => {
-                let docRef = result.parent.doc(result.id)
-                docRef.set({
-                    status: 'send'
-                }, {
-                    merge: true
-                }).then(() => {
-                    s(docRef)
-                });
             });
+
+            if (setSend) {
+
+                promiseSent.then(result => {
+
+                    let docRef = result.parent.doc(result.id)
+
+                    s(docRef.set({
+
+                        status: 'send'
+
+                    }, {
+
+                        merge: true
+
+                    }));
+
+                }).catch(err => { f(err) });
+
+            } else {
+
+                s(promiseSent)
+
+            }
         });
     }
+
 
     static upload(from, file) {
         return Upload.send(file, from);
     }
 
-    static sendDocument(chatID, from, file, preview) {
-        Message.send(chatID, from, 'document').then(msgRef => {
+    static sendDocument(chatID, from, file, preview, pdfInfo) {
+
+        return Message.send(chatID, from, 'document', false).then(msgRef => {
 
             Base64.toFile(preview).then(filePreview => {
 
@@ -99,31 +118,32 @@ export class Message extends Model {
                             preview: downloadPreview,
                             filename: file.name,
                             size: file.size,
-                            fileType: file.type
-                        })
+                            info: pdfInfo,
+                            fileType: file.type,
+                            status: 'send'
+                        });
                     });
                 });
             });
         });
 
-
     }
 
 
-    static sendImage(chatId, from, file) {
+    static sendImage(chatID, from, file) {
 
+        Message.send(chatID, from, 'image', '', false).then(msgRef => {
 
-        Message.upload(from, file).then(snapshot => {
-            Message.send(chatId, from, 'image', '', false)
-            msgRef.set({
-                content: snapshot.downloadURL,
-                status: 'send'
-            }, {
-                merge: true
+            Message.upload(from, file).then(snapshot => {
+                msgRef.set({
+                    content: snapshot.downloadURL,
+                    status: 'send'
+                }, {
+                    merge: true
+                });
+
             });
-
-        });
-
+        })
 
     }
 
@@ -248,7 +268,7 @@ export class Message extends Model {
 
                 div.querySelector('.message-photo').on('load'), e => {
                     div.querySelector('._340lu').hide();
-                    div.querySelector('_3v3PK').classList({
+                    div.querySelector('_3v3PK').css({
                         height: 'auto',
                     });
                 }
@@ -409,7 +429,7 @@ export class Message extends Model {
                 audioEl.onpause = e => {
                     audioDuration.innerHTML = Format.toTime(this.duration * 1000);
                     btnPlay.show();
-                    btnPause();
+                    btnPause.hide();
                 }
                 audioEl.onended = e => {
 

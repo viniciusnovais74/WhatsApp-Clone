@@ -226,7 +226,7 @@ export default class WhatsAppController {
 
                 Upload.send(file, this._user.email).then(snapshot => {
                     this._user.photo = snapshot.downloadURL;
-                    this._user.save().then(()=>{
+                    this._user.save().then(() => {
                         this.el.btnClosePanelEditProfile.click();
                     })
                 })
@@ -370,15 +370,12 @@ export default class WhatsAppController {
 
         });
 
-        //Anexo>Camera
+        //Anexo => Camera
         this.el.btnAttachCamera.on('click', e => {
 
             this.closeAllMainPanel();
             this.el.panelCamera.addClass('open');
-            this.el.panelCamera.css({
-                'height': '100%'
-
-            });
+            this.el.panelCamera.css({ 'height': '100%' });
 
             this._camera = new CameraController(this.el.videoCamera);
         });
@@ -391,10 +388,10 @@ export default class WhatsAppController {
 
         });
 
+        //Anexo => Camera => Tirar Foto
         this.el.btnTakePicture.on('click', e => {
 
             let dataUrl = this._camera.takePicture();
-
             this.el.pictureCamera.src = dataUrl;
             this.el.pictureCamera.show();
             this.el.videoCamera.hide();
@@ -411,9 +408,7 @@ export default class WhatsAppController {
             this.el.btnReshootPanelCamera.hide();
             this.el.containerTakePicture.show();
             this.el.containerSendPicture.hide();
-
-
-
+        
         });
 
         this.el.btnSendPicture.on('click', e => {
@@ -424,8 +419,6 @@ export default class WhatsAppController {
             let mimetype = result[1];
             let ext = mimetype.split('/')[1];
             let filename = `camera${Date.now()}.${ext}`;
-
-
 
             let picture = new Image();
             picture.src = this.el.pictureCamera.src;
@@ -467,7 +460,7 @@ export default class WhatsAppController {
             }
         });
 
-        //Anexo>Documentos
+        //Anexo => Documentos.
         this.el.btnAttachDocument.on('click', e => {
 
             this.closeAllMainPanel();
@@ -479,20 +472,28 @@ export default class WhatsAppController {
         });
 
         this.el.inputDocument.on('change', e => {
+
             if (this.el.inputDocument.files.length) {
+
                 let file = this.el.inputDocument.files[0];
 
                 this._documentPreviewController = new DocumentPreviewController(file);
 
                 this._documentPreviewController.getPreviewData().then(result => {
+
                     this.el.imgPanelDocumentPreview.src = result.src;
+
                     this.el.infoPanelDocumentPreview.innerHTML = result.info;
 
                     this.el.imagePanelDocumentPreview.show();
+
                     this.el.filePanelDocumentPreview.hide();
+
                     this.el.panelDocumentPreview.css({
+
                         'height': '100%'
-                    })
+
+                    });
 
                 }).catch(err => {
 
@@ -521,16 +522,15 @@ export default class WhatsAppController {
                     this.el.imagePanelDocumentPreview.hide();
                     this.el.filePanelDocumentPreview.show();
 
-                })
-
+                });
             }
-        })
+        });
 
         this.el.btnClosePanelDocumentPreview.on('click', e => {
 
             this.closeAllMainPanel();
             this.el.panelMessagesContainer.show();
-        })
+        });
 
         this.el.btnSendDocument.on('click', e => {
 
@@ -541,7 +541,7 @@ export default class WhatsAppController {
 
         });
 
-        //Anexo>Contatos
+        //Anexo => Contato.
         this.el.btnAttachContact.on('click', e => {
 
             this.el.modalContacts.show();
@@ -555,8 +555,7 @@ export default class WhatsAppController {
                     this._user.email,
                     contact
                 );
-            })
-
+            });
         });
 
         this.el.btnCloseModalContacts.on('click', e => {
@@ -564,17 +563,35 @@ export default class WhatsAppController {
             this.el.modalContacts.hide();
 
         });
+
         /**
          * Final do Menu Anexar
          */
 
-        //Microfone Inicio
+        /**
+         * 
+         * Microfone Botton Send, Finish, Cancel.
+         * 
+         */
         this.el.btnSendMicrophone.on('click', e => {
 
             this.el.recordMicrophone.show();
             this.el.btnSendMicrophone.hide();
 
-            this.startRecordMicrophoneTime();
+
+            this._microphoneController = new MicrophoneController();
+
+            this._microphoneController.on('ready', audio => {
+
+                this._microphoneController.startRecorder();
+
+            });
+
+            this._microphoneController.on('recordTimer', timer => {
+
+                this.el.recordMicrophoneTimer.innerHTML = Format.toTime(timer);
+
+            });
 
         });
 
@@ -588,21 +605,24 @@ export default class WhatsAppController {
 
             this._microphoneController.on('recoded', (file, metadata) => {
 
-                Message.sendAudio(_activeContact.chatID, this._user.email, file, metadata, this._user.photo);
+                Message.sendAudio(this._activeContact.chatID, this._user.email, file, metadata, this._user.photo);
 
             });
 
             this.closeRecordMicrophone();
 
         });
-        //Microfone Final
+        //------------------------------------------------------------
 
+        /**
+         * 
+         * Painel de Mensagens e envio de mensagns!
+         * 
+         */
 
-        //CHAT txt
         this.el.btnSend.on('click', e => {
 
-            Message.send(
-                this._contactActive.chatID, this._user.email, 'text', this.el.inputText.innerHTML);
+            Message.send(this._contactActive.chatID, this._user.email, 'text', this.el.inputText.innerHTML);
 
             this.el.inputText.innerHTML = "";
             this.el.panelEmojis.removeClass('open')
@@ -637,8 +657,14 @@ export default class WhatsAppController {
             }
 
         });
+        //--------------------------------------------------------------
 
-        //Emojis
+        /**
+         * 
+         * Painel de Emojis e reações!
+         * 
+         */
+
         this.el.btnEmojis.on('click', e => {
             this.el.panelEmojis.toggleClass('open');
         });
@@ -680,9 +706,14 @@ export default class WhatsAppController {
             });
         });
     }
+    //--------------------------------------------------------------
 
+    /**
+     * 
+     * Prototipos de elementos para funcionalidades!
+     * 
+     */
 
-    //Prototype de elementos 
     elementsPrototype() {
 
         //Define hide() com display:none
@@ -778,7 +809,12 @@ export default class WhatsAppController {
 
     }
 
-    //Carregador de Elementos é iniciado no Constructor
+    /**
+     * 
+     * Carrega os elementos do app-content
+     *  
+     */
+
     loadElements() {
 
         //Define .el como objeto vazio
@@ -787,15 +823,16 @@ export default class WhatsAppController {
         //faz uma busca no elemento por traz do id e um forEach
         document.querySelectorAll('[id]').forEach(element => {
             //no forEach ele vai atras do Format
-            this.el[Format.getCamelCase(element.id)] = element;
-
-        })
+            this.el[Format.getCamelCase(element.id)] = element
+        });
     }
 
     setActiveChat(contact) {
 
         if (this._contactActive) {
+
             Message.getRef(this._contactActive.chatID).onSnapshot(() => { });
+
         }
 
         this._contactActive = contact;
@@ -824,6 +861,8 @@ export default class WhatsAppController {
             let scrollTopMax = (this.el.panelMessagesContainer.scrollHeight - this.el.panelMessagesContainer.offsetHeight);
             let autoScroll = (scrollTop >= scrollTopMax);
 
+            this.el.panelMessagesContainer.innerHTML = '';
+
             docs.forEach(doc => {
 
                 let data = doc.data();
@@ -836,14 +875,19 @@ export default class WhatsAppController {
 
                 let me = (data.from === this._user.email);
 
-
-                let messageEl = message.getViewElement((data.from === this._user.email));
-
-                this.el.panelMessagesContainer.appendChild(messageEl);
+                if (!me && this._messagesReceived.filter(id => { return (id === data.id) }).length === 0) {
+                    this._messagesReceived.push(data.id);
+                    this.notification(data);
+                }
 
                 let view = message.getViewElement(me);
 
+                this.el.panelMessagesContainer.appendChild(view);
+
                 if (!this.el.panelMessagesContainer.querySelector('#_' + data.id)) {
+
+                    let messageEl = message.getViewElement((data.from === this._user.email));
+                    this.el.panelMessagesContainer.appendChild(messageEl);
 
                     if (!me) {
                         doc.ref.set({
@@ -853,7 +897,6 @@ export default class WhatsAppController {
                         })
                     }
 
-                    this.el.panelMessagesContainer.appendChild(view);
 
                 } else if (this.el.panelMessagesContainer.querySelector(`#_` + data.id) && me) {
 
@@ -911,19 +954,6 @@ export default class WhatsAppController {
     //////////////////////////////////////IGNORE//////////////////////////////////////////////
     startRecordMicrophoneTime() {
 
-        this._microphoneController = new MicrophoneController();
-
-        this._microphoneController.on('ready', audio => {
-
-            this._microphoneController.startRecorder();
-
-        });
-
-        this._microphoneController.on('recordTimer', (data, timer) => {
-
-            this.el.recordMicrophoneTimer.innerHTML = data.displayTimer;
-
-        });
     }
 
     closeRecordMicrophone() {
